@@ -1,0 +1,1 @@
+-e git+https://github.com/mdehling/nstesia.git@1ef74ff#egg=nstesia

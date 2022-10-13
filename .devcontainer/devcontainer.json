@@ -1,0 +1,14 @@
+{
+	"name": "Miniconda",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
+
+	"remoteUser": "vscode",
+
+	"extensions": [
+		"ms-python.python",
+		"ms-toolsai.jupyter"
+	]
+}
