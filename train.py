@@ -29,8 +29,11 @@ def parse_args():
 
     parser.add_argument('--data_dir', default='/tmp',
                         help='dataset directory - requires ~120gb')
-    parser.add_argument('--saved_model', default='saved/model',
-                        help='where to save the trained model.')
+
+    parser.add_argument('--load_model',
+                        help='load a model to resume training')
+    parser.add_argument('--save_model', default='saved/model',
+                        help='where to save the trained model')
 
     return parser.parse_args()
 
@@ -62,24 +65,6 @@ def get_dtd_ds(data_dir, batch_size):
     return ds.prefetch(tf.data.AUTOTUNE)
 
 
-def train_model(
-    bottleneck_dim,
-    content_weight, style_weight,
-    content_ds, style_ds, epochs,
-):
-    train_ds = tf.data.Dataset.zip((content_ds,style_ds))
-
-    model = nst.ghiasi_2017.StyleTransferModel(
-        bottleneck_dim=bottleneck_dim,
-        content_weight=content_weight,
-        style_weight=style_weight,
-    )
-    model.compile(optimizer='adam')
-    model.fit(train_ds, epochs=epochs)
-
-    return model
-
-
 if __name__ == '__main__':
 
     args = parse_args()
@@ -87,10 +72,18 @@ if __name__ == '__main__':
     content_ds = get_coco_ds(args.data_dir, args.batch_size)
     style_ds = get_dtd_ds(args.data_dir, args.batch_size)
 
-    model = train_model(
-        args.bottleneck_dim,
-        args.content_weight, args.style_weight,
-        content_ds, style_ds, args.epochs,
-    )
+    train_ds = tf.data.Dataset.zip((content_ds,style_ds))
 
-    model.save(args.saved_model, save_traces=False)
+    if args.load_model:
+        model = nst.ghiasi_2017.StyleTransferModel.from_saved(args.load_model)
+    else:
+        model = nst.ghiasi_2017.StyleTransferModel(
+            bottleneck_dim=args.bottleneck_dim,
+            content_weight=args.content_weight,
+            style_weight=args.style_weight,
+        )
+        model.compile(optimizer='adam')
+
+    model.fit(train_ds, epochs=args.epochs)
+
+    model.save(args.save_model, save_traces=False)
