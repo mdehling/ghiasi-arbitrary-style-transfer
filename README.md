@@ -20,17 +20,25 @@ learn a different set of normalization parameters for each style.  To allow
 for this, they proposed to replace each batch or instance normalization layer
 by their new conditional instance normalization layer which learns $N$ sets of
 instance normalization parameters and takes an $N$-dimensional style vector as
-a second input to select which (linear combination of) parameters to use.  For
-more details, see the 'Network Architecture' section below.
+a second input to select which (linear combination of) parameters to use.
+
+Still in 2017, Ghiasi, Lee, Kudlur, Dumoulin, and Shlens published their
+article _Exploring the Structure of a Real-Time, Arbitrary Neural Artistic
+Stylization Network_.  Their main contribution was the introduction of a
+style prediction network:  Instead of learning a set of normalization
+parameters for each of $N$ style images, they chose a bottleneck dimension $N$
+and employed a style prediction network to map style images to $N$-dimensional
+style vectors.  The final stylization model takes a pair consisting of a
+content and a style image as input and produces a pastiche image.
 
 In this repository I aim to give a brief description and demonstration of
-Dumoulin's style transfer model.  The implementation used is part of my python
-package [`nstesia`](https://github.com/mdehling/nstesia/) and can be found in
-its module [`dumoulin_2017`](
-https://github.com/mdehling/nstesia/blob/main/src/nstesia/dumoulin_2017.py).
+Ghiasi's approach to neural style transfer.  The implementation used is part
+of my python package [`nstesia`](https://github.com/mdehling/nstesia/) and can
+be found in its module [`ghiasi_2017`](
+https://github.com/mdehling/nstesia/blob/main/src/nstesia/ghiasi_2017.py).
 
-Network Architecture
---------------------
+The Style Transfer Network
+--------------------------
 The style transfer network has three main parts: the encoder, the bottleneck,
 and the decoder.  In addition, some pre- and post-processing is performed.
 Below I give a description of the various parts of the network.  The given
@@ -38,11 +46,13 @@ output dimensions are based on input image size of 256x256, but note they are
 provided for illustration only; the network is fully convolutional and
 handles input images of any size.
 
+The style transfer network takes two inputs: a content image and a style
+vector.  The style vector is produced from a style image using the style
+prediction network which I describe further down.
+
 ### Pre-Processing
 Input images are assumed to take RGB values in `0.0..255.0`. The preprocessing
-layer centers the RGB values around their ImageNet means.  Note that the
-padding layer of Johnson's model was removed: Padding is applied to each
-convolution layer individually instead of in one chunk here.
+layer simply subtracts the ImageNet means.
 
 ```text
 Layer                   Description                        Output Size
@@ -53,29 +63,28 @@ preprocess              Pre-Processing                     256x256x3
 ### The Encoder
 The encoder is composed of three convolutional blocks, each consisting of a
 reflection padding layer, a convolutional layer, a normalization layer, and a
-`relu` activation layer.  All reflection layers of the transfer model use
-`same` amount of reflection padding, i.e., the amount of padding is calculated
-by the same formulas as it is for `same` padding, but the type of padding
-applied is reflection padding instead of constant.  The second and third block
-uses strided convolutions to reduce the spatial dimensions by a total factor
-of 4.
+`relu` activation layer.  All padding layers of the transfer model use `same`
+amount of reflection padding, i.e., the amount of padding is calculated by the
+same formulas as it is for `same` padding, but the type of padding applied is
+reflection padding instead of constant.  The second and third block uses
+strided convolutions to reduce the spatial dimensions by a total factor of 4.
 
 ```text
 Block / Layer           Description                        Output Size
 ----------------------------------------------------------------------
 down_block_1 / rpad     ReflectionPadding
              / conv     Convolution (32, 9x9, stride 1)
-             / norm     ConditionalInstanceNormalization
+             / norm     BatchNormalization
              / act      Activation (ReLU)                  256x256x32
 
 down_block_2 / rpad     ReflectionPadding
              / conv     Convolution (64, 3x3, stride 2)
-             / norm     ConditionalInstanceNormalization
+             / norm     BatchNormalization
              / act      Activation (ReLU)                  128x128x64
 
 down_block_3 / rpad     ReflectionPadding
              / conv     Convolution (128, 3x3, stride 2)
-             / norm     Batch/InstanceNormalization
+             / norm     BatchNormalization
              / act      Activation (ReLU)                  64x64x128
 ```
 
@@ -95,7 +104,7 @@ res_block_1..5 / rpad1  ReflectionPadding
                / rpad2  ReflectionPadding
                / conv2  Convolution (128, 3x3, stride 1)
                / norm2  ConditionalInstanceNormalization
-               + res    Residual                           64x64x128
+               +        Residual                           64x64x128
 ```
 
 ### The Decoder
@@ -104,27 +113,27 @@ convolutional blocks, each of which consist of a reflection padding, a
 convolutional layer, a normalization layer, and an activation layer.  The
 first two of these layers start with an upsampling layer performing 2x nearest
 neighbor upsampling before the other layers and use 'relu' activations, while
-the final layer end with a 'sigmoid' activation.
+the final layer ends with a 'sigmoid' activation.
 
 ```text
 Block / Layer           Description                        Output Size
 ----------------------------------------------------------------------
-up_block_1 / up       UpSampling (2x, nearest)
-           / rpad     ReflectionPadding
-           / conv     Convolution (64, 3x3, stride 1)
-           / norm     ConditionalInstanceNormalization
-           / act      Activation (ReLU)                  128x128x64
+up_block_1 / up         UpSampling (2x, nearest)
+           / rpad       ReflectionPadding
+           / conv       Convolution (64, 3x3, stride 1)
+           / norm       ConditionalInstanceNormalization
+           / act        Activation (ReLU)                  128x128x64
 
-up_block_2 / up       UpSampling (2x, nearest)
-           / rpad     ReflectionPadding
-           / conv     Convolution (32, 3x3, stride 1)
-           / norm     ConditionalInstanceNormalization
-           / act      Activation (ReLU)                  256x256x32
+up_block_2 / up         UpSampling (2x, nearest)
+           / rpad       ReflectionPadding
+           / conv       Convolution (32, 3x3, stride 1)
+           / norm       ConditionalInstanceNormalization
+           / act        Activation (ReLU)                  256x256x32
 
-up_block_3 / rpad     ReflectionPadding
-           / conv     Convolution (3, 9x9, stride 1)
-           / norm     ConditionalInstanceNormalization
-           / act      Activation (Sigmoid)               256x256x3
+up_block_3 / rpad       ReflectionPadding
+           / conv       Convolution (3, 9x9, stride 1)
+           / norm       ConditionalInstanceNormalization
+           / act        Activation (Sigmoid)               256x256x3
 ```
 
 ### Post-Processing
@@ -138,12 +147,30 @@ Layer                   Description                        Output Size
 rescale                 Rescaling (factor 255.0)           256x256x3
 ```
 
+The Style Prediction Network
+----------------------------
+The style prediction network takes a style image as input and produces an
+$N$-dimensional style vector as output.  It consists of a preprocessing layer
+and an Inception-V3 model up to layer 'mixed7' (the keras name for 'Mixed6e'),
+followed by spatial averaging and a fully connected layer with $N$ outputs.
+
+```text
+Layer                   Description                        Output Size
+----------------------------------------------------------------------
+prep                    PreProcess                         256x256x3
+inception_v3            InceptionV3 ('mixed7')             14x14x768
+avg                     GlobalAveragePooling               1x1x768
+bneck                   Conv2D, squeeze                    N
+```
+
 Training Method
 ---------------
-Let $x_s$ be a chosen style image and denote by $T_s$ the _image 
-transformation network_.  The goal is to produce, for any content image
-$x_c$, a pastiche image $x_p = T_s(x_c)$ using a single forward pass of the
-network.  The objective formulated to achieve this goal is to minimize a
+Let $x_c$ be a content image and $x_s$ be a style image.  Denote by $T$ the
+style transfer network and by $P$ the style prediction network.  The style
+vector is $v = P(x_s)$ and is used to compute the pastiche image
+$x_p = T(x_c, v) = T(x_c, P(x_s))$.
+
+The style transfer and prediction networks are trained jointly to minimize the
 weighted sum
 
 $$
@@ -155,60 +182,27 @@ where $\mathcal{L}_C$ and $\mathcal{L}_S$ denote the content and style loss as
 introduced by Gatys et al.  For my implementation of these losses, see the
 module [`gatys_2015`](
 https://github.com/mdehling/nstesia/blob/main/src/nstesia/gatys_2015.py).
-Note the absence of a variation loss term: the use of upsampling instead of
-transposed (or fractionally strided) convolutions makes its use unnecessary.
 
-Training is performed for 8 epochs over the images of the Microsoft COCO/2014
-dataset using an `adam` optimizer with a learning rate of `1e-3`.  All images
-are resized to 256x256 and served in batches of 16.
+Training is performed for 50 epochs using an `adam` optimizer with a learning
+rate of `1e-3`.  The images of the Microsoft COCO/2014 dataset are used as
+content images and as style images one of two different datasets are used: the
+describable textures dataset or the painter by numbers dataset.  All content
+images are resized to 256x256 without any other processing; image augmentation
+is used for the style images (random cropping, flipping, and hue/contrast
+adjustments) before finally resizing them to 256x256.
 
 Results
 -------
-This repository contains a python script [`train.py`](train.py) which takes a
-collection of style images as well as some training parameters as input,
-downloads the training dataset, performs training of the style transfer model,
-and finally saves the trained model to disk.  The directory `saved/model`
-contains a model trained in this way for the 32 images in `img/style`.  To try
-the model out yourself, have a look at the notebook
-[`multi-style-transfer.ipynb`](multi-style-transfer.ipynb).
-All images below were produced using it.
+This repository contains a python script [`train.py`](train.py) which lets you
+adjust some training parameters, downloads the training dataset, performs
+joint training of the style transfer and prediction networks, and finally
+saves the trained combined model to disk.
 
 > **Note**
-> The images included here are lower quality jpeg files.  I have linked them
-> to their lossless png versions.
-
-The following are two sets of stylizations of the same content images in the
-same styles as used to demonstrate Johnson et al's style transfer network.
-Note that all of these pastiches were produced using a single style transfer
-network.  The quality of the results here is comparable to that of pastiches
-produced by Johnson's networks trained for individual styles—see my repository
-[`johnson-fast-style-transfer`](
-https://github.com/mdehling/johnson-fast-style-transfer).
-
-[![](img/results/content-style-matrix-1.jpg)
-](img/results/content-style-matrix-1.png)
-
-Note that the use of upsampling layers instead of transposed or fractionally
-strided convolutions can lead to improved results by eliminating checkerboard
-artifacts.  This is particularly clear when comparing the first of the
-following stylizations to the the corresponding one created using Johnson's
-network.
-
-[![](img/results/content-style-matrix-2.jpg)
-](img/results/content-style-matrix-2.png)
-
-The following demonstrates the ability of Dumoulin et al's network to produce
-pastiches in mixed styles.
-
-[![](img/results/style-mix-matrix.jpg)
-](img/results/style-mix-matrix.png)
+> Results are coming soon...
 
 References
 ----------
-* Dumoulin, Kudlur, Shlens - _A Learned Representation for Artistic Style_,
-  2017.
-  [[arxiv]](https://arxiv.org/abs/1610.07629)
-  [[code]](https://github.com/magenta/magenta/tree/main/magenta/models/image_stylization)
 * Johnson, Alahi, Fei-Fei - _Perceptual Losses for Real-Time Style Transfer
   and Super-Resolution_, 2016.
   [[pdf]](https://link.springer.com/content/pdf/10.1007/978-3-319-46475-6_43.pdf)
@@ -217,8 +211,21 @@ References
 * Ulyanov, Vedaldi, Lempitsky - _Instance Normalization: The Missing
   Ingredient for Fast Stylization_, 2016.
   [[arxiv]](https://arxiv.org/abs/1607.08022)
+* Dumoulin, Kudlur, Shlens - _A Learned Representation for Artistic Style_,
+  2017.
+  [[arxiv]](https://arxiv.org/abs/1610.07629)
+  [[code]](https://github.com/magenta/magenta/tree/main/magenta/models/image_stylization)
+* Ghiasi, Lee, Kudlur, Dumoulin, Shlens - _Exploring the Structure of a
+  Real-Time, Arbitrary Neural Stylization Network_, 2017.
+  [[pdf]](http://www.bmva.org/bmvc/2017/papers/paper114/paper114.pdf)
+  [[suppl]](http://www.bmva.org/bmvc/2017/papers/paper114/supplementary114.pdf)
 * Gatys, Ecker, Bethge - _A Neural Algorithm of Artistic Style_, 2015.
   [[pdf]](https://openaccess.thecvf.com/content_cvpr_2016/papers/Gatys_Image_Style_Transfer_CVPR_2016_paper.pdf)
 * Lin et al - _Microsoft COCO: Common Objects in Context_, 2014.
-  [[www]](https://cocodataset.org/)
   [[arxiv]](https://arxiv.org/abs/1405.0312)
+  [[www]](https://cocodataset.org/)
+* Cimpoi et al - _Describing Textures in the Wild_, 2014.
+  [[pdf]](https://www.robots.ox.ac.uk/~vgg/publications/2014/Cimpoi14/cimpoi14.pdf)
+  [[www]](https://www.robots.ox.ac.uk/~vgg/data/dtd/)
+* Kiri Nichol - _Painter by Numbers_, 2016.
+  [[www]](https://www.kaggle.com/c/painter-by-numbers)
