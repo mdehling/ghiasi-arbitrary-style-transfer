@@ -22,7 +22,7 @@ def parse_args():
                         help='content weight')
     parser.add_argument('--style_weight', type=float, default=1e-4,
                         help='style weight')
-    parser.add_argument('--epochs', type=int, default=10,
+    parser.add_argument('--epochs', type=int, default=16,
                         help='number of training epochs')
     parser.add_argument('--batch_size', type=int, default=8,
                         help='training batch size')
