@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from pathlib import Path
 
 from os import environ as env
 env['TF_CPP_MIN_LOG_LEVEL'] = '2'               # hide info & warnings
@@ -27,6 +28,9 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=8,
                         help='training batch size')
 
+    parser.add_argument('--style_dataset', default='dtd',
+                        choices=['dtd', 'pbn'],
+                        help='training style dataset')
     parser.add_argument('--data_dir', default='/tmp',
                         help='dataset directory - requires ~120gb')
 
@@ -47,21 +51,35 @@ def get_coco_ds(data_dir, batch_size):
 
 
 def style_image_preprocess(image):
-    image = tf.image.resize(image, [512,512])
-    image = tf.image.random_crop(image, [256,256,3])
     image = tf.image.random_flip_left_right(image)
     image = tf.image.random_flip_up_down(image)
-    image = tf.image.random_hue(image, 0.5)
-    image = tf.image.random_contrast(image, 0.5, 1.5)
+    image = tf.image.random_brightness(image, 0.8)
+    image = tf.image.random_saturation(image, 0.5, 1.5)
+    image = tf.image.random_hue(image, 0.2)
     return tf.clip_by_value(image, 0.0, 255.0)
 
 
 def get_dtd_ds(data_dir, batch_size):
-    ds = tfds.load('dtd', split='test+train+validation', data_dir=data_dir)
+    ds = tfds.load('dtd', split='all', data_dir=data_dir)
     ds = ds.map( lambda data: tf.cast(data['image'], dtype=tf.float32) )
+    ds = ds.map( lambda image: tf.image.random_crop(image, [256,256,3]) )
+    ds = ds.shuffle(1000).batch(batch_size, drop_remainder=True)
     ds = ds.map( style_image_preprocess )
-    ds = ds.shuffle(1000).repeat()
-    ds = ds.batch(batch_size, drop_remainder=True)
+    ds = ds.repeat()
+    return ds.prefetch(tf.data.AUTOTUNE)
+
+
+def get_pbn_ds(data_dir, batch_size):
+    ds = tf.keras.utils.image_dataset_from_directory(
+        Path(data_dir) / 'pbn/train',
+        label_mode=None,
+        batch_size=None,
+        shuffle=False,
+        image_size=(512,512),
+    )
+    ds = ds.map( lambda image: tf.image.random_crop(image, [256,256,3]) )
+    ds = ds.shuffle(1000).batch(batch_size, drop_remainder=True)
+    ds = ds.map( style_image_preprocess )
     return ds.prefetch(tf.data.AUTOTUNE)
 
 
@@ -70,7 +88,11 @@ if __name__ == '__main__':
     args = parse_args()
 
     content_ds = get_coco_ds(args.data_dir, args.batch_size)
-    style_ds = get_dtd_ds(args.data_dir, args.batch_size)
+
+    if args.style_dataset == 'dtd':
+        style_ds = get_dtd_ds(args.data_dir, args.batch_size)
+    else:
+        style_ds = get_pbn_ds(args.data_dir, args.batch_size)
 
     train_ds = tf.data.Dataset.zip((content_ds,style_ds))
 

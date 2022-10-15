@@ -10,4 +10,5 @@ dependencies:
   - tensorflow=2.8.2=gpu*
   - pip:
     - tensorflow-datasets
+    - kaggle
     - gdown
