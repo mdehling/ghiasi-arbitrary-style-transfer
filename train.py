@@ -56,7 +56,7 @@ def get_coco_ds(data_dir, batch_size):
 def style_image_preprocess(image):
     image = tf.image.random_flip_left_right(image)
     image = tf.image.random_flip_up_down(image)
-    image = tf.image.random_brightness(image, 0.8)
+    image = tf.image.random_brightness(image, 0.8 * 255.0)
     image = tf.image.random_saturation(image, 0.5, 1.5)
     image = tf.image.random_hue(image, 0.2)
     return tf.clip_by_value(image, 0.0, 255.0)
