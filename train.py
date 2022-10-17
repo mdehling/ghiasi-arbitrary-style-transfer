@@ -21,8 +21,11 @@ def parse_args():
                         help='bottleneck dimension')
     parser.add_argument('--content_weight', type=float, default=1.0,
                         help='content weight')
-    parser.add_argument('--style_weight', type=float, default=1e-4,
+    parser.add_argument('--style_weight', type=float, default=5e-4,
                         help='style weight')
+    parser.add_argument('--learning_rate', type=float, default=1e-5,
+                        help='learning rate of the adam optimizer')
+
     parser.add_argument('--epochs', type=int, default=16,
                         help='number of training epochs')
     parser.add_argument('--batch_size', type=int, default=8,
@@ -104,7 +107,7 @@ if __name__ == '__main__':
             content_weight=args.content_weight,
             style_weight=args.style_weight,
         )
-        model.compile(optimizer='adam')
+        model.compile( tf.keras.optimizers.Adam(args.learning_rate) )
 
     model.fit(train_ds, epochs=args.epochs)
 
