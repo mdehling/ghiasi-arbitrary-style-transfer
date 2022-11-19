@@ -21,14 +21,14 @@ def parse_args():
                         help='bottleneck dimension')
     parser.add_argument('--content_weight', type=float, default=1.0,
                         help='content weight')
-    parser.add_argument('--style_weight', type=float, default=5e-4,
+    parser.add_argument('--style_weight', type=float, default=1e-3,
                         help='style weight')
-    parser.add_argument('--learning_rate', type=float, default=1e-5,
+    parser.add_argument('--learning_rate', type=float, default=1e-6,
                         help='learning rate of the adam optimizer')
 
     parser.add_argument('--epochs', type=int, default=16,
                         help='number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=8,
+    parser.add_argument('--batch_size', type=int, default=16,
                         help='training batch size')
 
     parser.add_argument('--style_dataset', default='dtd',
