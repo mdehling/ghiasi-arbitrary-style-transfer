@@ -1,5 +1,22 @@
 Arbitrary Style Transfer (Ghiasi et al, 2017)
 =============================================
+In this repository I aim to give a brief description and demonstration of
+Ghiasi's approach to neural style transfer.  The implementation used is part
+of my python package [`nstesia`](https://github.com/mdehling/nstesia/) and can
+be found in its module [`ghiasi_2017`](
+https://github.com/mdehling/nstesia/blob/main/src/nstesia/ghiasi_2017.py).
+
+> [!NOTE]
+> There are two simple ways to run the demo notebook yourself without installing
+> any software on your local machine:
+>
+> 1. View the notebook on GitHub and click the _Open in Colab_ button (requires
+>    a Google account).
+> 2. Create a GitHub Codespace for this repository and run the notebook in
+>    VSCode (requires a GitHub account).
+
+Introduction
+------------
 In 2016, Johnson, Alahi, and Fei-Fei published their article _Perceptual
 Losses for Real-Time Style Transfer and Super-Resolution_ in which they
 introduced a style transfer network which, once trained for a given style
@@ -30,12 +47,6 @@ parameters for each of $N$ style images, they chose a bottleneck dimension $N$
 and employed a style prediction network to map style images to $N$-dimensional
 style vectors.  The final stylization model takes a pair consisting of a
 content and a style image as input and produces a pastiche image.
-
-In this repository I aim to give a brief description and demonstration of
-Ghiasi's approach to neural style transfer.  The implementation used is part
-of my python package [`nstesia`](https://github.com/mdehling/nstesia/) and can
-be found in its module [`ghiasi_2017`](
-https://github.com/mdehling/nstesia/blob/main/src/nstesia/ghiasi_2017.py).
 
 The Style Transfer Network
 --------------------------
