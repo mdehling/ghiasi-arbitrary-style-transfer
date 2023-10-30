@@ -1,0 +1,22 @@
+{
+    "name": "dev",
+    "image": "docker.io/mdehling/ms-universal-extra:2-focal",
+    "postCreateCommand": "pip install -r requirements-dev.txt",
+    "hostRequirements": {
+        "cpus": 4,
+        "memory": "32gb",
+        "gpu": true,
+        "storage": "64gb"
+    },
+    "runArgs": [
+        "--shm-size=1g"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-toolsai.jupyter"
+            ]
+        }
+    }
+}

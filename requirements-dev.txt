@@ -1,0 +1,2 @@
+gdown
+-e git+https://github.com/mdehling/nstesia.git
