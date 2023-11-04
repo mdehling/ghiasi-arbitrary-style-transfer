@@ -1,7 +1,7 @@
 {
     "name": "demo",
     "image": "docker.io/mdehling/ms-python-extra:1-3.10",
-    "postCreateCommand": "pip install -r requirements-demo.txt",
+    "postCreateCommand": "pip install -U pip setuptools && pip install -r requirements-demo.txt",
     "customizations": {
         "vscode": {
             "extensions": [
