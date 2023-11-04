@@ -1,2 +1,4 @@
 gdown
--e git+https://github.com/mdehling/nstesia.git
+kaggle
+tensorflow-datasets
+-e git+https://github.com/mdehling/nstesia.git#egg=nstesia
